@@ -1,54 +1,96 @@
 // hooks/usePagos.ts
 import { useState } from 'react';
-import type { Pago } from '../types/pagos';
+import type { Pago, ViewMode } from '../types/pagos';
 
 export const usePagos = (totalInicial: number) => {
   const [pagos, setPagos] = useState<Pago[]>([
-    { id: '1', titulo: 'Anticipo', monto: totalInicial, status: 'pendiente', fecha: new Date() }
-  ]);
-
-  // Lógica para añadir pago dividiendo a la mitad
-  const agregarPago = (indexInsertar: number) => {
-    const nuevosPagos = [...pagos];
-    const pagoReferencia = nuevosPagos[indexInsertar];
-
-    if (pagoReferencia && pagoReferencia.status === 'pendiente') {
-      const mitad = pagoReferencia.monto / 2;
-      pagoReferencia.monto = mitad; // El actual se reduce
-      
-      const nuevoPago: Pago = { 
-        id: crypto.randomUUID(),
-        titulo: `Pago ${nuevosPagos.length}`,
-        monto: mitad,
-        status: 'pendiente',
-        fecha: new Date(),
-      };
-      
-      nuevosPagos.splice(indexInsertar + 1, 0, nuevoPago);
-      setPagos(nuevosPagos);
-      
-      //@todo: API PATCH para actualizar el monto del pago anterior y POST para el nuevo
+    { 
+      id: crypto.randomUUID(), 
+      titulo: 'Anticipo', 
+      monto: totalInicial, 
+      status: 'pendiente', 
+      fecha: new Date() 
     }
+  ]);
+  const [modo, setModo] = useState<ViewMode>('view');
+
+  /**
+   * Lógica principal para dividir pagos.
+   * Se encarga de insertar un "Nuevo" pago dividiendo el monto del pago de referencia.
+   */
+  const agregarPago = (indexReferencia: number) => {
+    const nuevosPagos = [...pagos];
+    const pagoBase = nuevosPagos[indexReferencia];
+
+    // Regla: Un pago en estado "pagado" no puede ser modificado ni dividido
+    if (pagoBase.status === 'pagado') {
+      // Si el actual está pagado, buscamos el siguiente disponible para dividir
+      alert("Este pago ya está cerrado. El sistema dividirá el próximo pendiente.");
+      return; 
+    }
+
+    // Regla: Dividir el monto a la mitad
+    const montoMitad = pagoBase.monto / 2;
+    pagoBase.monto = montoMitad;
+
+    const nuevoPago: Pago = {
+      id: crypto.randomUUID(),
+      titulo: 'Nuevo', // Identificador temporal para el resaltado visual
+      monto: montoMitad,
+      status: 'pendiente',
+      fecha: new Date(),
+    };
+
+    // Insertar el nuevo pago justo después de la referencia
+    nuevosPagos.splice(indexReferencia + 1, 0, nuevoPago);
+
+    // Re-indexar títulos para mantener la consistencia del flujo
+    const totalElementos = nuevosPagos.length;
+    const pagosProcesados = nuevosPagos.map((p, i) => {
+      if (i === 0) return { ...p, titulo: 'Anticipo' };
+      if (i === totalElementos - 1) return { ...p, titulo: 'Pago Final' };
+      // Si no es el recién creado "Nuevo", le asignamos su número correlativo
+      if (p.titulo !== 'Nuevo') return { ...p, titulo: `Pago ${i}` };
+      return p;
+    });
+
+    setPagos(pagosProcesados);
+    setModo('edit'); // Cambiamos a modo edición automáticamente según el flujo
+    
+    //@todo: API PATCH para actualizar la distribución completa y montos modificados
   };
 
+  /**
+   * Cambia el estado a pagado validando la correlatividad.
+   */
   const marcarComoPagado = (id: string) => {
-    // No se puede pagar si el anterior no está pagado
     const index = pagos.findIndex(p => p.id === id);
+    
+    // Regla: No se puede pagar una cuota si la anterior no se ha pagado
     if (index > 0 && pagos[index - 1].status === 'pendiente') {
-      alert("Debes pagar la cuota anterior primero");
+      alert("No se puede pagar esta cuota si la anterior no se ha pagado.");
       return;
     }
 
     setPagos(prev => prev.map(p => p.id === id ? { ...p, status: 'pagado' } : p));
-    //@todo: API PUT para cambiar estado a 'pagado'
+    //@todo: API PUT para actualizar el estado del pago individual a 'pagado'
   };
 
-  // Calcula el porcentaje respecto al total inicial
-const calcularPorcentaje = (monto: number, total: number): string => {
-  const porcentaje = (monto / total) * 100;
-  // Uso la misma lógica de redondeo: si es entero sin decimales, si no, un decimal.
-  return porcentaje % 1 === 0 ? porcentaje.toString() : porcentaje.toFixed(1);
-};
+  /**
+   * Utilidad para la visualización de porcentajes.
+   * Regla: Redondeo a un decimal solo si es necesario.
+   */
+  const obtenerPorcentajeText = (monto: number): string => {
+    const porcentaje = (monto / totalInicial) * 100;
+    return porcentaje % 1 === 0 ? porcentaje.toString() : porcentaje.toFixed(1);
+  };
 
-  return { pagos, agregarPago, marcarComoPagado, calcularPorcentaje };
+  return { 
+    pagos, 
+    modo, 
+    setModo,
+    agregarPago, 
+    marcarComoPagado, 
+    obtenerPorcentajeText 
+  };
 };

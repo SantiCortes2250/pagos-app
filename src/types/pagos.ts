@@ -1,5 +1,6 @@
 export type Currency = 'USD' | 'COP';
 export type Status = 'pendiente' | 'pagado';
+export type ViewMode = 'view' | 'edit';
 
 export interface Pago {
   id: string;
