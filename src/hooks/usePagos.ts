@@ -3,7 +3,11 @@ import type { Pago } from '../types/pagos';
 
 export const usePagos = (totalInicial: number) => {
   const [pagos, setPagos] = useState<Pago[]>([
-    { id: crypto.randomUUID(), titulo: 'Anticipo', monto: totalInicial, status: 'pendiente', fecha: new Date() }
+    {
+      id: crypto.randomUUID(), titulo: 'Anticipo', monto: totalInicial, status: 'pendiente', fecha: new Date(),
+      fechaPagoReal: undefined,
+      metodoPago: ''
+    }
   ]);
 
   const agregarPago = (indexReferencia: number) => {
@@ -76,9 +80,24 @@ export const usePagos = (totalInicial: number) => {
     );
   };
 
+
+  const completarPago = (id: string, metodo: string) => {
+    const fechaHoy = new Date();
+    setPagos(prev => prev.map(p => 
+      p.id === id 
+        ? { 
+            ...p, 
+            status: 'pagado', 
+            metodoPago: metodo, 
+            fechaPagoReal: fechaHoy // Se guarda la fecha del momento de presión
+          } 
+        : p
+    ));
+  };
+
   const obtenerPorcentajeText = (monto: number) => 
     ((monto / totalInicial) * 100).toFixed((monto / totalInicial * 100) % 1 === 0 ? 0 : 1);
 
 
-  return { pagos, agregarPago, marcarComoPagado, obtenerPorcentajeText, actualizarPorcentaje, actualizarFecha };
+  return { pagos, agregarPago, marcarComoPagado, obtenerPorcentajeText, actualizarPorcentaje, actualizarFecha, completarPago };
 };
