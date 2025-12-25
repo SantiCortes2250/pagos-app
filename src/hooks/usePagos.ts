@@ -28,6 +28,8 @@ export const usePagos = (totalInicial: number) => {
       monto: montoMitad,
       status: 'pendiente',
       fecha: new Date(),
+      fechaPagoReal: undefined,
+      metodoPago: ''
     };
 
     listaActual.splice(indexReferencia + 1, 0, nuevoPago);
@@ -43,7 +45,7 @@ export const usePagos = (totalInicial: number) => {
     setPagos(pagosProcesados);
   };
 
-  const marcarComoPagado = (id: string) => {
+  const marcarComoPagado = (id: string, metodo: string) => {
     const index = pagos.findIndex(p => p.id === id);
     // Validación de pago anterior
     if (index > 0 && pagos[index - 1].status === 'pendiente') {
