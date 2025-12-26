@@ -1,15 +1,73 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Pago } from '../types/pagos';
+import { PagoSchema } from '../types/pagos';
+import { z } from "zod";
 
 export const usePagos = (totalInicial: number) => {
-  const [pagos, setPagos] = useState<Pago[]>([
-    {
-      id: crypto.randomUUID(), titulo: 'Anticipo', monto: totalInicial, status: 'pendiente', fecha: new Date(),
-      fechaPagoReal: undefined,
-      metodoPago: ''
-    }
-  ]);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const mostrarError = (msg: string) => {
+    setErrorMsg(msg);
+    setTimeout(() => setErrorMsg(null), 4000);
+  };
+
+  // --- CARGA INICIAL ---
+  const [pagos, setPagos] = useState<Pago[]>(() => {
+    const saved = localStorage.getItem('pagos_data');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Zod coerce convertirá los strings de fecha de nuevo a objetos Date
+        return z.array(PagoSchema).parse(parsed);
+      } catch (e) {
+        console.error("Error en persistencia:", e);
+      }
+    }
+    return [{
+      id: crypto.randomUUID(), 
+      titulo: 'Anticipo', 
+      monto: totalInicial, 
+      status: 'pendiente', 
+      fecha: new Date(),
+      metodoPago: ''
+    }];
+  });
+
+  // --- PERSISTENCIA ---
+  useEffect(() => {
+    localStorage.setItem('pagos_data', JSON.stringify(pagos));
+  }, [pagos]);
+
+  // Función central de actualización con validación
+  const setPagosValidados = (nuevosPagos: Pago[]) => {
+    const result = z.array(PagoSchema).safeParse(nuevosPagos);
+
+    if (result.success) {
+      setPagos(result.data);
+      return true;
+    } else {
+      // safeParse no lanza excepción, devuelve un objeto con los errores
+      // Tomamos el primer error de cualquier campo
+      const issues = result.error.issues;
+      if (issues.length > 0) {
+        mostrarError(issues[0].message);
+      } else {
+        mostrarError("Error de validación en los datos");
+      }
+      return false;
+    }
+  };
+
+  // --- FUNCIONES DE GESTIÓN DE PAGOS ---
+
+  // Actualiza el título de un pago
+  const actualizarTitulo = (id: string, nuevoTitulo: string) => {
+    const nuevos = pagos.map(p => p.id === id ? { ...p, titulo: nuevoTitulo } : p);
+    setPagosValidados(nuevos);
+  };
+
+
+  // Agrega un nuevo pago dividiendo el monto del pago referenciado
   const agregarPago = (indexReferencia: number) => {
     const listaActual = [...pagos];
     const pagoBase = { ...listaActual[indexReferencia] };
@@ -19,87 +77,54 @@ export const usePagos = (totalInicial: number) => {
     pagoBase.monto = montoMitad;
     listaActual[indexReferencia] = pagoBase;
 
-    // Lógica de nombres: Si ya hay pagos, el nuevo es "Nuevo" (intermedio) o "Pago Final" (si es el último)
-    const esAlFinal = indexReferencia === listaActual.length - 1;
-    
     const nuevoPago: Pago = {
       id: crypto.randomUUID(),
-      titulo: esAlFinal ? 'Pago Final' : 'Nuevo',
+      titulo: 'Nuevo',
       monto: montoMitad,
       status: 'pendiente',
       fecha: new Date(),
-      fechaPagoReal: undefined,
       metodoPago: ''
     };
 
     listaActual.splice(indexReferencia + 1, 0, nuevoPago);
-
-    // Re-indexar nombres para mantener el orden Pago 1, Pago 2...
-    const pagosProcesados = listaActual.map((p, i, arr) => {
-      if (i === 0) return { ...p, titulo: 'Anticipo' };
-      if (i === arr.length - 1) return { ...p, titulo: p.titulo === 'Nuevo' ? 'Nuevo' : 'Pago Final' };
-      if (p.titulo === 'Nuevo') return p; // Mantener "Nuevo" si se acaba de crear
-      return { ...p, titulo: `Pago ${i}` };
-    });
-
-    setPagos(pagosProcesados);
+    setPagosValidados(listaActual);
   };
 
+  // Marca un pago como pagado, validando el orden
   const marcarComoPagado = (id: string, metodo: string) => {
     const index = pagos.findIndex(p => p.id === id);
-    // Validación de pago anterior
     if (index > 0 && pagos[index - 1].status === 'pendiente') {
-      alert(`Debes marcar como pagado el "${pagos[index - 1].titulo}" antes de continuar.`);
+      mostrarError(`Debes pagar "${pagos[index-1].titulo}" primero.`);
       return;
     }
-    setPagos(prev => prev.map(p => p.id === id ? { ...p, status: 'pagado' } : p));
+    setPagosValidados(pagos.map(p => 
+      p.id === id ? { ...p, status: 'pagado', metodoPago: metodo, fechaPagoReal: new Date() } : p
+    ));
   };
 
+  // Actualiza el monto de un pago y ajusta el vecino para mantener el total
   const actualizarPorcentaje = (index: number, incremento: number) => {
     const nuevos = [...pagos];
     const vecinoIdx = index === 0 ? index + 1 : index - 1;
     if (!nuevos[vecinoIdx] || nuevos[index].status === 'pagado' || nuevos[vecinoIdx].status === 'pagado') return;
     
     const delta = totalInicial * 0.01 * incremento;
-    if (nuevos[index].monto + delta < 0 || nuevos[vecinoIdx].monto - delta < 0) return;
+    if (nuevos[index].monto + delta <= 0 || nuevos[vecinoIdx].monto - delta <= 0) return;
     
     nuevos[index] = { ...nuevos[index], monto: nuevos[index].monto + delta };
     nuevos[vecinoIdx] = { ...nuevos[vecinoIdx], monto: nuevos[vecinoIdx].monto - delta };
-    setPagos(nuevos);
+    setPagosValidados(nuevos);
   };
 
+  // Actualiza la fecha de un pago
   const actualizarFecha = (id: string, nuevaFecha: Date) => {
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0); // Normalizar para comparar solo fechas
-
-    if (nuevaFecha < hoy) {
-      alert("La fecha no puede ser menor a la fecha actual");
-      return;
-    }
-
-    setPagos((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, fecha: nuevaFecha } : p))
-    );
+    setPagosValidados(pagos.map(p => p.id === id ? { ...p, fecha: nuevaFecha } : p));
   };
 
 
-  const completarPago = (id: string, metodo: string) => {
-    const fechaHoy = new Date();
-    setPagos(prev => prev.map(p => 
-      p.id === id 
-        ? { 
-            ...p, 
-            status: 'pagado', 
-            metodoPago: metodo, 
-            fechaPagoReal: fechaHoy // Se guarda la fecha del momento de presión
-          } 
-        : p
-    ));
-  };
-
+  // Obtiene el porcentaje que representa un monto respecto al total inicial
   const obtenerPorcentajeText = (monto: number) => 
     ((monto / totalInicial) * 100).toFixed((monto / totalInicial * 100) % 1 === 0 ? 0 : 1);
 
-
-  return { pagos, agregarPago, marcarComoPagado, obtenerPorcentajeText, actualizarPorcentaje, actualizarFecha, completarPago };
+  return { pagos, agregarPago, marcarComoPagado, obtenerPorcentajeText, actualizarPorcentaje, actualizarFecha, actualizarTitulo, errorMsg };
 };

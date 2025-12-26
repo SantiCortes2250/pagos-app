@@ -1,13 +1,15 @@
-export type Currency = 'USD' | 'COP';
-export type Status = 'pendiente' | 'pagado';
-export type ViewMode = 'view' | 'edit';
+import { z } from "zod";
 
-export interface Pago {
-  fechaPagoReal: any;
-  metodoPago: string;
-  id: string;
-  titulo: string;
-  monto: number; // Valor interno sin redondear
-  status: Status;
-  fecha: Date;
-}
+
+// Esquema y tipo para Pago
+export const PagoSchema = z.object({
+  id: z.string().uuid(),
+  titulo: z.string().min(1, "El título es obligatorio").max(20, "Título muy largo"),
+  monto: z.number().positive("El monto debe ser mayor a 0"),
+  status: z.enum(["pendiente", "pagado"]),
+  fecha: z.coerce.date(), // Coerce ayuda a convertir strings de JSON a objetos Date
+  metodoPago: z.string().optional(),
+  fechaPagoReal: z.coerce.date().optional(),
+});
+
+export type Pago = z.infer<typeof PagoSchema>;

@@ -16,7 +16,7 @@ const ModalPago = ({ isOpen, onClose, onConfirm }: ModalPagoProps) => {
       <div className="bg-white rounded-lg shadow-xl p-6 w-[400px] relative">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400"
+          className="absolute top-4 right-4 text-gray-400 cursor-pointer"
         >
           ✕
         </button>
@@ -30,7 +30,7 @@ const ModalPago = ({ isOpen, onClose, onConfirm }: ModalPagoProps) => {
           <select
             value={metodo}
             onChange={(e) => setMetodo(e.target.value)}
-            className="w-full border rounded-md p-2 mt-1 outline-none focus:border-orange-500"
+            className="w-full border rounded-md p-2 mt-1 outline-none focus:border-orange-500 cursor-pointer"
           >
             <option value="Efectivo">Efectivo</option>
             <option value="Tarjeta">Tarjeta</option>
@@ -38,10 +38,10 @@ const ModalPago = ({ isOpen, onClose, onConfirm }: ModalPagoProps) => {
         </div>
 
         <div className="flex justify-end gap-2">
-          <button className="p-2 text-gray-300 hover:text-red-500">🗑</button>
+          <button className="p-2 text-gray-300 hover:text-red-500 cursor-pointer">🗑</button>
           <button
             onClick={() => onConfirm(metodo)}
-            className="bg-orange-600 text-white px-6 py-2 rounded-md font-bold text-sm"
+            className="bg-orange-600 text-white px-6 py-2 rounded-md font-bold text-sm cursor-pointer"
           >
             Guardar
           </button>
