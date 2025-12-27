@@ -6,14 +6,21 @@ interface ModalPagoProps {
   onConfirm: (metodo: string) => void;
 }
 
+/*
+ Este modal lo hice sencillo pero funcional. 
+ Su única responsabilidad es capturar el método de pago y avisarle al padre.
+*/
 const ModalPago = ({ isOpen, onClose, onConfirm }: ModalPagoProps) => {
+  // Manejo el método de pago en un estado local para que el componente sea "controlado".
   const [metodo, setMetodo] = useState("Efectivo");
-
+  // Si el modal no debe estar abierto, no renderizamos nada (Early return).
   if (!isOpen) return null;
 
   return (
+    // El "fixed inset-0" crea el fondo oscuro (overlay) que bloquea el resto de la app.
     <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl p-6 w-[400px] relative">
+        {/* Botón de cerrar tipo "X" */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-400 cursor-pointer"
@@ -38,9 +45,13 @@ const ModalPago = ({ isOpen, onClose, onConfirm }: ModalPagoProps) => {
         </div>
 
         <div className="flex justify-end gap-2">
+          {/* Este botón de borrar está ahí por si en el futuro añado la funcion de cancelar la cuota, 
+              por ahora solo es visual para seguir el diseño. */}
           <button className="p-2 text-gray-300 hover:text-red-500 cursor-pointer">🗑</button>
           <button
+          // Le pasamos el método seleccionado a la función que viene del hook usePagos.
             onClick={() => onConfirm(metodo)}
+            //@todo: api post para registrar el log de la transacción.
             className="bg-orange-600 text-white px-6 py-2 rounded-md font-bold text-sm cursor-pointer"
           >
             Guardar

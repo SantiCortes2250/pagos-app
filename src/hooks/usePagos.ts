@@ -3,9 +3,18 @@ import type { Pago } from '../types/pagos';
 import { PagoSchema } from '../types/pagos';
 import { z } from "zod";
 
+/*
+  Custom hook para gestionar la lógica de los pagos.
+  Decidí separar esto en un hook para no llenar el componente visual y 
+  porque manejar estados complejos de arrays me parecio mas comodo.
+ */
+
+
 export const usePagos = (totalInicial: number, prestamoId: string) => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Helper para mostrar errores temporales. 
+  // Lo puse en 4 segundos para que al usuario le de tiempo de leerlo bien.
   const mostrarError = (msg: string) => {
     setErrorMsg(msg);
     setTimeout(() => setErrorMsg(null), 4000);
@@ -13,18 +22,22 @@ export const usePagos = (totalInicial: number, prestamoId: string) => {
 
   // --- CARGA INICIAL ---
   const [pagos, setPagos] = useState<Pago[]>(() => {
-    // Usamos una llave única por cada préstamo
+    // Use el ID del préstamo en la key para que los pagos de un cliente 
+    // no se mezclen con los de otro en el almacenamiento local.
     const storageKey = `pagos_prestamo_${prestamoId}`;
     const saved = localStorage.getItem(storageKey);
+    
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Zod coerce convertirá los strings de fecha de nuevo a objetos Date
+        // Use Zod aquí porque el localStorage puede venir con datos corruptos 
+        // o fechas en formato string y necesitamos objetos Date reales.
         return z.array(PagoSchema).parse(parsed);
       } catch (e) {
-       console.error("Error cargando pagos específicos:", e);
+        console.error("Error cargando pagos específicos:", e);
       }
     }
+    // Si no hay nada, el primer pago siempre es por el total.
     return [{
       id: crypto.randomUUID(), 
       titulo: 'Anticipo', 
@@ -35,14 +48,20 @@ export const usePagos = (totalInicial: number, prestamoId: string) => {
     }];
   });
 
-// Guardar cambios siempre referenciando al ID del préstamo
+  // Guardo en LocalStorage cada vez que cambian los pagos o el ID del préstamo.
+  // Me parece forma sencilla de tener persistencia sin backend todavía.
   useEffect(() => {
     if (prestamoId) {
       localStorage.setItem(`pagos_prestamo_${prestamoId}`, JSON.stringify(pagos));
+      //@todo: api post para sincronizar los cambios con la base de datos de forma persistente.
     }
   }, [pagos, prestamoId]);
 
-  // Función central de actualización con validación
+  /*
+    Esta es la función para actualizar el estado.
+    La hice así para centralizar la validación de Zod y no repetir el manejo de errores
+    en cada pequeña función de arriba.
+   */
   const setPagosValidados = (nuevosPagos: Pago[]) => {
     const result = z.array(PagoSchema).safeParse(nuevosPagos);
 
@@ -50,8 +69,7 @@ export const usePagos = (totalInicial: number, prestamoId: string) => {
       setPagos(result.data);
       return true;
     } else {
-      // safeParse no lanza excepción, devuelve un objeto con los errores
-      // Tomamos el primer error de cualquier campo
+      // Si Zod falla, agarramos el primer error de la lista para mostrar algo claro.
       const issues = result.error.issues;
       if (issues.length > 0) {
         mostrarError(issues[0].message);
@@ -64,14 +82,17 @@ export const usePagos = (totalInicial: number, prestamoId: string) => {
 
   // --- FUNCIONES DE GESTIÓN DE PAGOS ---
 
-  // Actualiza el título de un pago
   const actualizarTitulo = (id: string, nuevoTitulo: string) => {
     const nuevos = pagos.map(p => p.id === id ? { ...p, titulo: nuevoTitulo } : p);
     setPagosValidados(nuevos);
+    //@todo: api patch para actualizar solo el título en el servidor.
   };
 
-
-  // Agrega un nuevo pago dividiendo el monto del pago referenciado
+  /*
+    Divide un pago a la mitad.
+    Elegí usar splice para insertar el nuevo pago justo después del que estamos dividiendo,
+    así mantenemos un flujo visual lógico en la línea de tiempo.
+   */
   const agregarPago = (indexReferencia: number) => {
     const listaActual = [...pagos];
     const pagoBase = { ...listaActual[indexReferencia] };
@@ -92,9 +113,13 @@ export const usePagos = (totalInicial: number, prestamoId: string) => {
 
     listaActual.splice(indexReferencia + 1, 0, nuevoPago);
     setPagosValidados(listaActual);
+    //@todo: api post para guardar la creación de esta nueva cuota.
   };
 
-  // Marca un pago como pagado, validando el orden
+  /*
+    Marca como pagado.
+    Agregué una validación de orden para que el usuario no vaya a pagar la cuota 2 si la 1 está pendiente.
+   */
   const marcarComoPagado = (id: string, metodo: string) => {
     const index = pagos.findIndex(p => p.id === id);
     if (index > 0 && pagos[index - 1].status === 'pendiente') {
@@ -104,15 +129,21 @@ export const usePagos = (totalInicial: number, prestamoId: string) => {
     setPagosValidados(pagos.map(p => 
       p.id === id ? { ...p, status: 'pagado', metodoPago: metodo, fechaPagoReal: new Date() } : p
     ));
+    //@todo: api put para registrar el pago y disparar notificaciones de cobro.
   };
 
-  // Actualiza el monto de un pago y ajusta el vecino para mantener el total
+  /*
+   Mueve los montos entre pagos vecinos.
+   Si sumo a uno se le resta al de al lado para que el total del préstamo no cambie y siga siendo el 100%.
+   Me parece una forma de mantener la integridad de la deuda total sin cálculos extras.
+   */
   const actualizarPorcentaje = (index: number, incremento: number) => {
     const nuevos = [...pagos];
     const vecinoIdx = index === 0 ? index + 1 : index - 1;
     if (!nuevos[vecinoIdx] || nuevos[index].status === 'pagado' || nuevos[vecinoIdx].status === 'pagado') return;
     
     const delta = totalInicial * 0.01 * incremento;
+    // Validación para no tener montos negativos, eso rompería la lógica financiera.
     if (nuevos[index].monto + delta <= 0 || nuevos[vecinoIdx].monto - delta <= 0) return;
     
     nuevos[index] = { ...nuevos[index], monto: nuevos[index].monto + delta };
@@ -120,15 +151,24 @@ export const usePagos = (totalInicial: number, prestamoId: string) => {
     setPagosValidados(nuevos);
   };
 
-  // Actualiza la fecha de un pago
   const actualizarFecha = (id: string, nuevaFecha: Date) => {
     setPagosValidados(pagos.map(p => p.id === id ? { ...p, fecha: nuevaFecha } : p));
+    //@todo: api patch para actualizar fecha de vencimiento.
   };
 
-
-  // Obtiene el porcentaje que representa un monto respecto al total inicial
+  // Formateador para los porcentajes. 
+  // Uso una lógica de redondeo para que si es un número entero (como 10%) no muestre decimales.
   const obtenerPorcentajeText = (monto: number) => 
     ((monto / totalInicial) * 100).toFixed((monto / totalInicial * 100) % 1 === 0 ? 0 : 1);
 
-  return { pagos, agregarPago, marcarComoPagado, obtenerPorcentajeText, actualizarPorcentaje, actualizarFecha, actualizarTitulo, errorMsg };
+  return { 
+    pagos, 
+    agregarPago, 
+    marcarComoPagado, 
+    obtenerPorcentajeText, 
+    actualizarPorcentaje, 
+    actualizarFecha, 
+    actualizarTitulo, 
+    errorMsg 
+  };
 };

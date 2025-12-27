@@ -10,7 +10,14 @@ interface PagosProps {
   prestamoId: string;
 }
 
+/*
+ Este componente maneja la línea de tiempo de los pagos.
+ Realice el diseño horizontal con scroll por si hay muchas cuotas,
+ el usuario pueda navegar sin que la página se haga infinita hacia abajo.
+ */
+
 const Pagos: React.FC<PagosProps> = ({ total, moneda = "USD", prestamoId }) => {
+  // Traigo toda la lógica del hook para dejar este componente solo con lo visual.
   const {
     pagos,
     agregarPago,
@@ -22,18 +29,29 @@ const Pagos: React.FC<PagosProps> = ({ total, moneda = "USD", prestamoId }) => {
     errorMsg,
   } = usePagos(total, prestamoId);
 
+  // Estados locales para la UI: si estamos editando o qué pago se va a procesar.
   const [esEdicion, setEsEdicion] = useState(false);
   const [pagoParaPagar, setPagoParaPagar] = useState<Pago | null>(null);
 
+  //  Aca necesito la fecha de hoy para bloquear días pasados en el calendario de edición.
   const hoy = new Date().toISOString().split("T")[0];
 
+  /*
+   Aca manejo el cierre del modal y confirmo la acción.
+   Lo puse aquí porque es una acción que depende directamente de la interacción con el Modal.
+  */
   const handleConfirmarPago = (metodo: string) => {
     if (pagoParaPagar) {
       marcarComoPagado(pagoParaPagar.id, metodo);
       setPagoParaPagar(null);
+      //@todo: api post para notificar al servidor que se completó un pago.
     }
   };
 
+  /*
+   Helper para que el input type="date" no de errores de formato.
+   Los inputs nativos de HTML piden YYYY-MM-DD entonces me aseguro de dárselo así.
+  */
   const formatFechaParaInput = (fecha: Date | string) => {
   const d = new Date(fecha);
   const year = d.getFullYear();
@@ -44,7 +62,10 @@ const Pagos: React.FC<PagosProps> = ({ total, moneda = "USD", prestamoId }) => {
 
   return (
     <div className="p-8 bg-white rounded-xl shadow-sm border border-gray-100 max-w-6xl mx-auto relative overflow-hidden">
-      {/* --- NOTIFICACIÓN DE ERROR --- */}
+      {/* --- NOTIFICACIÓN DE ERROR --- 
+          Aparece con una animación desde arriba para que el usuario note que algo falló
+          (como cuando el título está vacío o el orden de pago es incorrecto).
+      */}
       {errorMsg && (
         <div className="absolute top-0 left-0 right-0 bg-red-50 border-b border-red-100 px-4 py-2 flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top duration-300 z-50">
           <span className="text-red-500 text-lg">⚠️</span>
@@ -62,6 +83,7 @@ const Pagos: React.FC<PagosProps> = ({ total, moneda = "USD", prestamoId }) => {
         </div>
 
         <div className="flex items-center gap-6">
+          {/* Botón de toggle para modo edición. Cambia de color cuando está activo. */}
           <button
             onClick={() => setEsEdicion(!esEdicion)}
             className={`cursor-pointer ${
@@ -85,6 +107,7 @@ const Pagos: React.FC<PagosProps> = ({ total, moneda = "USD", prestamoId }) => {
       {/* --- FLUJO DE CUOTAS --- */}
 
       <div className="flex items-center overflow-x-auto pb-6 scrollbar-hide pt-4">
+        {/* Botón inicial de agregar: Solo aparece si ya hay divisiones hechas */}
         {pagos.length > 1 && (
           <div className="flex items-center self-start mt-3 mr-2 shrink-0">
             <button
@@ -101,6 +124,7 @@ const Pagos: React.FC<PagosProps> = ({ total, moneda = "USD", prestamoId }) => {
           <div key={pago.id} className="flex items-center">
             {/* --- NODO DE CUOTA --- */}
             <div className="flex flex-col items-center w-35">
+              {/* Círculo de estado: Verde si está pagado, naranja si estamos editando */}
               <div
                 onClick={() =>
                   !esEdicion &&
@@ -128,6 +152,9 @@ const Pagos: React.FC<PagosProps> = ({ total, moneda = "USD", prestamoId }) => {
               </div>
 
               <div className="mt-4 w-full text-center">
+                {/* Renderizado condicional según el estado.
+                   Si es modo edición, mostramos inputs para que el usuario pueda cambiar valores.
+                */}
                 {pago.status === "pagado" ? (
                   <div className="space-y-0.5">
                     <p className="font-semibold text-gray-900 text-xl">
@@ -153,6 +180,7 @@ const Pagos: React.FC<PagosProps> = ({ total, moneda = "USD", prestamoId }) => {
                   </div>
                 ) : esEdicion ? (
                   <div className="space-y-2">
+                    {/* El onBlur asegura que solo validamos cuando el usuario termina de escribir */}
                     <input
                       className={`font-semibold text-gray-900 text-xl border border-gray-200 rounded outline-none w-full px-2`}
                       defaultValue={pago.titulo}
@@ -166,6 +194,7 @@ const Pagos: React.FC<PagosProps> = ({ total, moneda = "USD", prestamoId }) => {
                         {moneda}
                       </span>
                     </div>
+                    {/* Controles de porcentaje para ajustar montos entre cuotas vecinas */}
                     <div className="flex items-center justify-center gap-2">
                       <button
                         onClick={() => actualizarPorcentaje(index, -1)}
@@ -202,6 +231,7 @@ const Pagos: React.FC<PagosProps> = ({ total, moneda = "USD", prestamoId }) => {
                     </div>
                   </div>
                 ) : (
+                  // Vista de lectura normal
                   <>
                     <p className="font-semibold text-gray-900 text-xl">
                       {pago.titulo}
@@ -226,7 +256,10 @@ const Pagos: React.FC<PagosProps> = ({ total, moneda = "USD", prestamoId }) => {
               </div>
             </div>
 
-            {/* --- CONECTORES --- */}
+            {/* --- CONECTORES (La línea entre cuotas) --- 
+                La línea se pone verde cuando el pago anterior se completa. 
+                Aparece un botón "+" flotante para dividir cuotas fácilmente.
+            */}
             {index < pagos.length - 1 ? (
               <div className="relative flex items-center self-start mt-6 mr-2 group">
                 <div
@@ -248,6 +281,7 @@ const Pagos: React.FC<PagosProps> = ({ total, moneda = "USD", prestamoId }) => {
                 )}
               </div>
             ) : (
+              // Botón de "Agregar Pago" al final si solo hay una cuota (estado inicial).
               pagos.length === 1 &&
               !esEdicion && (
                 <div className="relative flex items-center self-start mr-2 group">
@@ -268,7 +302,9 @@ const Pagos: React.FC<PagosProps> = ({ total, moneda = "USD", prestamoId }) => {
         ))}
       </div>
 
-      {/* --- MODAL DE PAGO --- */}
+      {/* --- MODAL DE PAGO --- 
+          Solo se activa cuando seleccionamos un nodo que está pendiente.
+      */}
       {pagoParaPagar && (
         <ModalPago
           isOpen={!!pagoParaPagar}

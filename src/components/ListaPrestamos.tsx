@@ -4,29 +4,42 @@ import type { Prestamo } from '../types/pagos';
 import {  PrestamoSchema } from '../types/pagos';
 import { z } from 'zod';
 
+
+/**
+ * Este es el componente principal que actúa como "Home".
+ * Lo diseñé siguiendo el patrón de Maestro-Detalle: primero ves la lista 
+ * y luego entras a la gestión específica de un préstamo.
+ */
 const ListaPrestamos: React.FC = () => {
   const [prestamos, setPrestamos] = useState<Prestamo[]>([]);
   const [prestamoSeleccionado, setPrestamoSeleccionado] = useState<Prestamo | null>(null);
 
-  // Cargar lista inicial
- 
+  // --- EFECTO DE CARGA ---
 useEffect(() => {
+    // Aca intento recuperar la lista general de préstamos.
   const saved = localStorage.getItem('lista_prestamos');
   let listaBase: Prestamo[] = [];
 
   if (saved) {
+    // Validamos con Zod para asegurar que los datos guardados sigan el esquema actual.
     try {
       listaBase = z.array(PrestamoSchema).parse(JSON.parse(saved));
     } catch (e) { console.error("Error al cargar préstamos", e); }
   } else {
-    // Data inicial de ejemplo
+    // Si el usuario entra por primera vez, le mostramos data de ejemplo para que no vea la app vacía.
     listaBase = [
       { id: '1', cliente: "Juan Perez", total: 182, moneda: "USD", fechaCreacion: new Date(), pagos: [] },
       { id: '2', cliente: "Maria Sosa", total: 190, moneda: "USD", fechaCreacion: new Date(), pagos: [] }
     ];
+    //@todo: api get para obtener la lista real de préstamos desde el servidor.
   }
 
-  // REHIDRATACIÓN: Buscamos si hay pagos guardados para cada préstamo en el localStorage
+ /*
+    LÓGICA DE REHIDRATACIÓN:
+    Como cada préstamo guarda sus propios pagos en una llave aparte (pagos_prestamo_ID),
+    aquí hacemos un "merge". Recorremos cada préstamo y le inyectamos sus pagos actualizados.
+    Hice esto para que la persistencia sea individual y más limpia.
+*/
   const listaConPagosCargados = listaBase.map(p => {
     const pagosGuardados = localStorage.getItem(`pagos_prestamo_${p.id}`);
     return {
@@ -39,6 +52,11 @@ useEffect(() => {
   setPrestamos(listaConPagosCargados);
 }, []);
 
+/*
+   VISTA DE DETALLE:
+   Si hay un préstamo seleccionado, "limpiamos" la pantalla y mostramos el componente de Pagos.
+   Pasamos el prestamoId para que el componente hijo sepa qué "caja" de localStorage abrir.
+*/
   if (prestamoSeleccionado) {
     return (
       <div className="p-4">
@@ -60,6 +78,11 @@ useEffect(() => {
     );
   }
 
+  /*
+   VISTA DE LISTA (MAESTRO):
+   Un grid simple con tarjetas. Puse efectos de hover y sombras suaves para que se 
+   sienta como una aplicación moderna y profesional.
+   */
   return (
     <div className="max-w-4xl mx-auto p-8">
       <h2 className="text-3xl font-bold text-slate-800 mb-8">Mis Préstamos</h2>
@@ -85,6 +108,11 @@ useEffect(() => {
           </div>
         ))}
       </div>
+      {/* Aca podria crear un botón flotante opcional para el futuro para agragr nuevos prestamos 
+
+       //@todo: api post para crear un nuevo préstamo mediante un formulario/modal.
+      */}
+     
     </div>
   );
 };
