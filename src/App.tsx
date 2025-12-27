@@ -1,11 +1,10 @@
-
-import Pagos from './components/Pagos'
+import ListaPrestamos from './components/ListaPrestamos'
 
 function App() {
 
   return (
     <div className="app m-10 p-10">
-      <Pagos total={182} moneda="USD" />
+      <ListaPrestamos />
     </div>
    
   )

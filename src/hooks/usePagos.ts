@@ -3,7 +3,7 @@ import type { Pago } from '../types/pagos';
 import { PagoSchema } from '../types/pagos';
 import { z } from "zod";
 
-export const usePagos = (totalInicial: number) => {
+export const usePagos = (totalInicial: number, prestamoId: string) => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const mostrarError = (msg: string) => {
@@ -13,14 +13,16 @@ export const usePagos = (totalInicial: number) => {
 
   // --- CARGA INICIAL ---
   const [pagos, setPagos] = useState<Pago[]>(() => {
-    const saved = localStorage.getItem('pagos_data');
+    // Usamos una llave única por cada préstamo
+    const storageKey = `pagos_prestamo_${prestamoId}`;
+    const saved = localStorage.getItem(storageKey);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         // Zod coerce convertirá los strings de fecha de nuevo a objetos Date
         return z.array(PagoSchema).parse(parsed);
       } catch (e) {
-        console.error("Error en persistencia:", e);
+       console.error("Error cargando pagos específicos:", e);
       }
     }
     return [{
@@ -33,10 +35,12 @@ export const usePagos = (totalInicial: number) => {
     }];
   });
 
-  // --- PERSISTENCIA ---
+// Guardar cambios siempre referenciando al ID del préstamo
   useEffect(() => {
-    localStorage.setItem('pagos_data', JSON.stringify(pagos));
-  }, [pagos]);
+    if (prestamoId) {
+      localStorage.setItem(`pagos_prestamo_${prestamoId}`, JSON.stringify(pagos));
+    }
+  }, [pagos, prestamoId]);
 
   // Función central de actualización con validación
   const setPagosValidados = (nuevosPagos: Pago[]) => {
