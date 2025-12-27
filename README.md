@@ -1,73 +1,48 @@
-# React + TypeScript + Vite
+# 💸 Pagos-App: Gestión Dinámica de Préstamos
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Esta es una aplicación técnica desarrollada con **React**, **TypeScript** y **Tailwind CSS**. El objetivo principal es permitir la gestión de planes de pago de forma dinámica, permitiendo dividir cuotas, ajustar montos proporcionalmente y mantener la persistencia de datos localmente.
 
-Currently, two official plugins are available:
+## 🚀 Características Principales
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+* **Arquitectura Maestro-Detalle**: Navegación fluida entre una lista global de préstamos y el detalle específico de cada uno.
+* **Gestión Dinámica de Cuotas**: Posibilidad de dividir cuotas existentes manteniendo la integridad del monto total.
+* **Cálculo Proporcional**: Ajuste de montos mediante porcentajes; el cambio en una cuota afecta automáticamente a su vecina para evitar errores financieros.
+* **Validación de Datos con Zod**: Esquemas de validación en tiempo de ejecución para asegurar la integridad de los datos y el manejo correcto de tipos.
+* **Persistencia Local**: Uso de `localStorage` con lógica de rehidratación para que la información no se pierda al recargar el navegador.
+* **Manejo Inteligente de Fechas**: Solución al desfase de zonas horarias (UTC vs Local) en los inputs de fecha.
 
-## React Compiler
+## 🛠️ Stack Tecnológico
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+* **Frontend**: React 18 (Vite)
+* **Estilos**: Tailwind CSS
+* **Validación**: Zod
+* **Tipado**: TypeScript
 
-## Expanding the ESLint configuration
+## 📁 Estructura del Proyecto
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Basado en buenas prácticas de **Clean Code** y separación de responsabilidades:
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```text
+src/
+├── components/       # Componentes visuales (Pagos, ListaPrestamos, Modal)
+├── hooks/            # Lógica de negocio extraída en Custom Hooks (usePagos)
+├── types/            # Definición de tipos de TS y Esquemas de Zod
+├── utils/            # Funciones de ayuda (formateadores de moneda)
+├── App.tsx           # Punto de entrada principal
+└── main.tsx          # Renderizado de la aplicación
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 🛠️ Instalación y Uso
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+1. Clonar el repositorio:
+git clone https://github.com/SantiCortes2250/pagos-app
+
+2. Instalar dependencias:
+npm install
+
+3.Ejecutar el proyecto:
+npm run dev
+
 ```
