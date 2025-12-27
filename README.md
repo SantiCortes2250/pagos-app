@@ -46,3 +46,7 @@ npm install
 npm run dev
 
 ```
+
+## 🌍 Live Demo
+
+[text](https://pagos-app.netlify.app/)
