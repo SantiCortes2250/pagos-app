@@ -3,6 +3,9 @@ import { usePagos } from "../hooks/usePagos";
 import { formatMonto } from "../utils/formatters";
 import ModalPago from "./ModalPago";
 import type { Pago } from "../types/pagos";
+import pagadoIon from "@/assets/icons/pagado.png";
+import editIcon from "@/assets/icons/edit.svg"; 
+import arrowDownIcon from "@/assets/icons/arrow-down.svg";
 
 interface PagosProps {
   total: number;
@@ -79,7 +82,7 @@ const Pagos: React.FC<PagosProps> = ({ total, moneda = "USD", prestamoId }) => {
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-2 cursor-pointer group">
           <h2 className="text-orange-600 font-semibold sm:text-lg md:text-2xl">Pagos</h2>
-          <img className="w-4 md:mt-2" src="src/assets/icons/arrow-down.svg" alt="" />
+          <img className="w-4 md:mt-2" src={arrowDownIcon} alt="" />
         </div>
 
         <div className="flex items-center gap-6">
