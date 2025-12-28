@@ -5,7 +5,7 @@ import ModalPago from "./ModalPago";
 import type { Pago } from "../types/pagos";
 import pagadoIon from "@/assets/icons/pagado.png";
 import editIcon from "@/assets/icons/edit.svg"; 
-import arrowDownIcon from "@/assets/icons/arrow-down.svg";
+import arrowDownIcon from "../assets/icons/arrow-down.svg";
 
 interface PagosProps {
   total: number;
