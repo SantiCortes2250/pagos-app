@@ -95,7 +95,7 @@ const Pagos: React.FC<PagosProps> = ({ total, moneda = "USD", prestamoId }) => {
             {esEdicion ? "Guardar" : "Editar ✎"}
           </button>
 
-          <div className="text-gray-400 text-[23px]">
+          <div className="text-gray-400 sm:text-lg md:text-2xl">
             Por cobrar{" "}
             <span className="text-gray-900 font-semibold">
               {formatMonto(total)} {moneda}
