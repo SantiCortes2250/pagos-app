@@ -5,7 +5,7 @@ import ModalPago from "./ModalPago";
 import type { Pago } from "../types/pagos";
 import pagadoIon from "@/assets/icons/pagado.png";
 import editIcon from "@/assets/icons/edit.svg"; 
-import arrowDownIcon from "../assets/icons/arrow-down.svg";
+import arrowDownIcon from "@/assets/icons/arrow-down.svg";
 
 interface PagosProps {
   total: number;
@@ -98,7 +98,7 @@ const Pagos: React.FC<PagosProps> = ({ total, moneda = "USD", prestamoId }) => {
             {esEdicion ? "Guardar" : 
             <div className="flex items-center">
               <span className="mr-2">Editar</span>
-              <img className="h-3.5 w-3.5" src="src/assets/icons/edit.svg" alt="" />
+              <img className="h-3.5 w-3.5" src={editIcon} alt="" />
               </div>}
           </button>
 
@@ -148,12 +148,12 @@ const Pagos: React.FC<PagosProps> = ({ total, moneda = "USD", prestamoId }) => {
                 }`}
               >
                 {pago.status === "pagado" ? (
-                   <img src="src/assets/icons/pagado.png" alt="" />
+                   <img src={pagadoIon} alt="" />
                 ) : esEdicion ? (
-                      <img src="src/assets/icons/edit.svg" alt="" />
+                      <img src={editIcon} alt="" />
                 ) : (
                     <span className="hidden group-hover:block text-xs font-bold transition-all">
-                      <img src="src/assets/icons/edit.svg" alt="" />
+                      <img src={editIcon} alt="" />
                     </span>
                 )}
               </div>
