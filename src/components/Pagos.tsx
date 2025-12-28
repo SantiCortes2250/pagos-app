@@ -78,8 +78,8 @@ const Pagos: React.FC<PagosProps> = ({ total, moneda = "USD", prestamoId }) => {
       {/* --- HEADER --- */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-2 cursor-pointer group">
-          <h2 className="text-orange-600 font-semibold text-2xl">Pagos</h2>
-          <span className="text-orange-400 text-xs">⌄</span>
+          <h2 className="text-orange-600 font-semibold sm:text-lg md:text-2xl">Pagos</h2>
+          <img className="w-4 md:mt-2" src="src/assets/icons/arrow-down.svg" alt="" />
         </div>
 
         <div className="flex items-center gap-6">
@@ -92,7 +92,11 @@ const Pagos: React.FC<PagosProps> = ({ total, moneda = "USD", prestamoId }) => {
                 : "text-orange-600 font-semibold text-base"
             } text-sm transition-colors`}
           >
-            {esEdicion ? "Guardar" : "Editar ✎"}
+            {esEdicion ? "Guardar" : 
+            <div className="flex items-center">
+              <span className="mr-2">Editar</span>
+              <img className="h-3.5 w-3.5" src="src/assets/icons/edit.svg" alt="" />
+              </div>}
           </button>
 
           <div className="text-gray-400 sm:text-lg md:text-2xl">
@@ -141,13 +145,13 @@ const Pagos: React.FC<PagosProps> = ({ total, moneda = "USD", prestamoId }) => {
                 }`}
               >
                 {pago.status === "pagado" ? (
-                  <span className="text-xl">🎉</span>
+                   <img src="src/assets/icons/pagado.png" alt="" />
                 ) : esEdicion ? (
-                  <span className="text-xs">✎</span>
+                      <img src="src/assets/icons/edit.svg" alt="" />
                 ) : (
-                  <span className="hidden group-hover:block text-xs font-bold transition-all">
-                    ✎
-                  </span>
+                    <span className="hidden group-hover:block text-xs font-bold transition-all">
+                      <img src="src/assets/icons/edit.svg" alt="" />
+                    </span>
                 )}
               </div>
 
